@@ -20,7 +20,7 @@ def get_flipped_entry_outclass_wrapper(IMDB_instance, seg_rec):
     return IMDB_instance.get_flipped_entry(seg_rec)
 
 class IMDB(object):
-    def __init__(self, name, image_set, root_path, dataset_path, result_path=None):
+    def __init__(self, name, image_set, root_path, dataset_path, result_path=None, rpn_path = None):
         """
         basic information about an image database
         :param name: name of image database will be used for any output
@@ -32,7 +32,7 @@ class IMDB(object):
         self.root_path = root_path
         self.data_path = dataset_path
         self._result_path = result_path
-
+        self._rpn_path = rpn_path
         # abstract attributes
         self.classes = []
         self.num_classes = 0
@@ -71,6 +71,13 @@ class IMDB(object):
         else:
             return self.cache_path
 
+    @property
+    def rpn_path(self):
+        if self._rpn_path:
+            return self._rpn_path
+        else:
+            return self.result_path
+
     def image_path_at(self, index):
         """
         access image at index in image database
@@ -81,25 +88,27 @@ class IMDB(object):
 
     def load_rpn_data(self, full=False):
         if full:
-            rpn_file = os.path.join(self.result_path, 'rpn_data', self.name + '_full_rpn.pkl')
+            rpn_file = os.path.join(self.rpn_path, 'rpn_data', self.name + '_full_rpn.pkl')
         else:
-            rpn_file = os.path.join(self.result_path, 'rpn_data', self.name + '_rpn.pkl')
+            rpn_file = os.path.join(self.rpn_path, 'rpn_data', self.name + '_rpn.pkl')
         print 'loading {}'.format(rpn_file)
         assert os.path.exists(rpn_file), 'rpn data not found at {}'.format(rpn_file)
         with open(rpn_file, 'rb') as f:
             box_list = cPickle.load(f)
         return box_list
 
-    def load_rpn_roidb(self, gt_roidb):
+    def load_rpn_roidb(self, gt_roidb, top_roi = -1):
         """
         turn rpn detection boxes into roidb
         :param gt_roidb: [image_index]['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
         :return: roidb: [image_index]['boxes', 'gt_classes', 'gt_overlaps', 'flipped']
         """
         box_list = self.load_rpn_data()
+        if top_roi != -1:
+            box_list = [boxes[:top_roi,:] for boxes in box_list]
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
-    def rpn_roidb(self, gt_roidb, append_gt=False):
+    def rpn_roidb(self, gt_roidb, append_gt=False, top_roi=-1):
         """
         get rpn roidb and ground truth roidb
         :param gt_roidb: ground truth roidb
@@ -108,8 +117,8 @@ class IMDB(object):
         """
         if append_gt:
             print 'appending ground truth annotations'
-            rpn_roidb = self.load_rpn_roidb(gt_roidb)
-            roidb = IMDB.merge_roidbs(gt_roidb, rpn_roidb)
+            rpn_roidb = self.load_rpn_roidb(gt_roidb, top_roi)
+            roidb = IMDB.merge_roidbs(rpn_roidb, gt_roidb)
         else:
             roidb = self.load_rpn_roidb(gt_roidb)
         return roidb
@@ -150,7 +159,8 @@ class IMDB(object):
                             'gt_overlaps': overlaps,
                             'max_classes': overlaps.argmax(axis=1),
                             'max_overlaps': overlaps.max(axis=1),
-                            'flipped': False})
+                            'flipped': False,
+                            'is_gt': np.zeros(num_boxes)})
 
             # background roi => background class
             zero_indexes = np.where(roi_rec['max_overlaps'] == 0)[0]
@@ -217,7 +227,8 @@ class IMDB(object):
                      'gt_overlaps': roidb[i]['gt_overlaps'],
                      'max_classes': roidb[i]['max_classes'],
                      'max_overlaps': roidb[i]['max_overlaps'],
-                     'flipped': True}
+                     'flipped': True,
+                     'is_gt': roidb[i]['is_gt']}
 
             # if roidb has mask
             if 'cache_seg_inst' in roi_rec:
@@ -368,4 +379,5 @@ class IMDB(object):
             a[i]['gt_overlaps'] = np.vstack((a[i]['gt_overlaps'], b[i]['gt_overlaps']))
             a[i]['max_classes'] = np.hstack((a[i]['max_classes'], b[i]['max_classes']))
             a[i]['max_overlaps'] = np.hstack((a[i]['max_overlaps'], b[i]['max_overlaps']))
+            a[i]['is_gt'] = np.hstack((a[i]['is_gt'], b[i]['is_gt']))
         return a

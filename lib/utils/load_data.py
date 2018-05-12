@@ -12,16 +12,17 @@ def load_gt_roidb(dataset_name, image_set_name, root_path, dataset_path, result_
     return roidb
 
 
-def load_proposal_roidb(dataset_name, image_set_name, root_path, dataset_path, result_path=None,
-                        proposal='rpn', append_gt=True, flip=False):
+def load_proposal_roidb(dataset_name, image_set_name, root_path, dataset_path, result_path=None, rpn_path=None,
+                        proposal='rpn', append_gt=True, flip=False, top_roi=-1):
     """ load proposal roidb (append_gt when training) """
-    imdb = eval(dataset_name)(image_set_name, root_path, dataset_path, result_path)
+    imdb = eval(dataset_name)(image_set_name, root_path, dataset_path, result_path, rpn_path)
 
     gt_roidb = imdb.gt_roidb()
-    roidb = eval('imdb.' + proposal + '_roidb')(gt_roidb, append_gt)
+    roidb = eval('imdb.' + proposal + '_roidb')(gt_roidb, append_gt, top_roi)
     if flip:
         roidb = imdb.append_flipped_images(roidb)
     return roidb
+
 
 
 def merge_roidb(roidbs):
@@ -37,10 +38,14 @@ def filter_roidb(roidb, config):
 
     def is_valid(entry):
         """ valid images have at least 1 fg or bg roi """
-        overlaps = entry['max_overlaps']
-        fg_inds = np.where(overlaps >= config.TRAIN.FG_THRESH)[0]
-        bg_inds = np.where((overlaps < config.TRAIN.BG_THRESH_HI) & (overlaps >= config.TRAIN.BG_THRESH_LO))[0]
-        valid = len(fg_inds) > 0 or len(bg_inds) > 0
+
+        if all(entry['gt_classes'] == 0):
+            valid = False
+        else:
+            overlaps = entry['max_overlaps']
+            fg_inds = np.where(overlaps >= config.TRAIN.FG_THRESH)[0]
+            bg_inds = np.where((overlaps < config.TRAIN.BG_THRESH_HI) & (overlaps >= config.TRAIN.BG_THRESH_LO))[0]
+            valid = len(fg_inds) > 0 or len(bg_inds) > 0
         return valid
 
     num = len(roidb)

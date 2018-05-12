@@ -37,7 +37,6 @@ def compute_bbox_regression_targets(rois, overlaps, labels, cfg):
         print 'something wrong : zero ground truth rois'
     # Indices of examples for which we try to make predictions
     ex_inds = np.where(overlaps >= cfg.TRAIN.BBOX_REGRESSION_THRESH)[0]
-
     # Get IoU overlap between each ex ROI and gt ROI
     ex_gt_overlaps = bbox_overlaps(rois[ex_inds, :], rois[gt_inds, :])
 

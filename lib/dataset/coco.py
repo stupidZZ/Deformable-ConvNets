@@ -59,14 +59,14 @@ def coco_results_one_category_kernel(data_pack):
 
 
 class coco(IMDB):
-    def __init__(self, image_set, root_path, data_path, result_path=None, mask_size=-1, binary_thresh=None):
+    def __init__(self, image_set, root_path, data_path, result_path=None, rpn_path=None, mask_size=-1, binary_thresh=None):
         """
         fill basic information to initialize imdb
         :param image_set: train2014, val2014, test2015
         :param root_path: 'data', will write 'rpn_data', 'cache'
         :param data_path: 'data/coco'
         """
-        super(coco, self).__init__('COCO', image_set, root_path, data_path, result_path)
+        super(coco, self).__init__('COCO', image_set, root_path, data_path, result_path, rpn_path)
         self.root_path = root_path
         self.data_path = data_path
         self.coco = COCO(self._get_ann_file())
@@ -179,7 +179,8 @@ class coco(IMDB):
                    'gt_overlaps': overlaps,
                    'max_classes': overlaps.argmax(axis=1),
                    'max_overlaps': overlaps.max(axis=1),
-                   'flipped': False}
+                   'flipped': False,
+                   'is_gt': np.ones(boxes.shape[0])}
         return roi_rec
 
     def mask_path_from_index(self, index):
