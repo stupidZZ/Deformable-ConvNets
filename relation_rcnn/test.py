@@ -64,7 +64,7 @@ def main():
     print args
     np.random.seed(0)
     mx.random.seed(0)
-    logger, final_output_path = create_logger(config.output_path, args.cfg, config.dataset.test_image_set, args.debug)
+    logger, final_output_path = create_logger(config.output_path, args.cfg, config.dataset.test_image_set)
 
     test_rcnn(config, config.dataset.dataset, config.dataset.test_image_set, config.dataset.root_path, config.dataset.dataset_path,
               ctx, os.path.join(final_output_path, '..', '_'.join([iset for iset in config.dataset.image_set.split('+')]), config.TRAIN.model_prefix), config.TEST.test_epoch,
