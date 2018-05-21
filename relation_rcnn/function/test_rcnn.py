@@ -15,7 +15,7 @@ import mxnet as mx
 
 from symbols import *
 from dataset import *
-from core.loader import TestLoader, GtLoader
+from core.loader import TestLoader
 from core.tester import Predictor, pred_eval
 from utils.load_model import load_param
 
@@ -45,10 +45,7 @@ def test_rcnn(cfg, dataset, image_set, root_path, dataset_path,
         roidb = eval('imdb.' + proposal + '_roidb')(gt_roidb)
 
     # get test data iter
-    if not cfg.TEST.GT_NMS:
-        test_data = TestLoader(roidb, cfg, batch_size=len(ctx), shuffle=shuffle, has_rpn=has_rpn)
-    else:
-        test_data = GtLoader(roidb, cfg, batch_size=len(ctx), shuffle=shuffle, has_rpn=has_rpn)
+    test_data = TestLoader(roidb, cfg, batch_size=len(ctx), shuffle=shuffle, has_rpn=has_rpn)
 
     # load model
     arg_params, aux_params = load_param(prefix, epoch, process=True)
@@ -78,9 +75,6 @@ def test_rcnn(cfg, dataset, image_set, root_path, dataset_path,
             max_data_shape.append(('rois_1', (1, cfg.TEST.PROPOSAL_POST_NMS_TOP_N/4, 5)))
             max_data_shape.append(('rois_2', (1, cfg.TEST.PROPOSAL_POST_NMS_TOP_N/4, 5)))
             max_data_shape.append(('rois_3', (1, cfg.TEST.PROPOSAL_POST_NMS_TOP_N/4, 5)))
-
-    if cfg.TEST.GT_NMS:
-        max_data_shape.append(('gt_boxes', (300, 5)))
 
     max_data_shape = [max_data_shape]
     # create predictor

@@ -1,9 +1,8 @@
 # --------------------------------------------------------
-# Deformable Convolutional Networks
 # Copyright (c) 2016 by Contributors
 # Copyright (c) 2017 Microsoft
 # Licensed under The Apache-2.0 License [see LICENSE for details]
-# Modified by Yuwen Xiong
+# Modified by Dazhi Cheng
 # --------------------------------------------------------
 
 import numpy as np
@@ -14,103 +13,7 @@ from config.config import config
 from utils.image import tensor_vstack
 from rpn.rpn import get_rpn_testbatch, get_rpn_batch, assign_anchor, get_rpn_batch_all
 from rcnn import get_rcnn_testbatch, get_rcnn_batch
-
-
-class GtLoader(mx.io.DataIter):
-    def __init__(self, roidb, config, batch_size=1, shuffle=False,
-                 has_rpn=False):
-        super(GtLoader, self).__init__()
-
-        # save parameters as properties
-        self.cfg = config
-        self.roidb = roidb
-        self.batch_size = batch_size
-        self.shuffle = shuffle
-        self.has_rpn = has_rpn
-
-        # infer properties from roidb
-        self.size = len(self.roidb)
-        self.index = np.arange(self.size)
-
-        # decide data and label names (only for training)
-        if has_rpn:
-            self.data_name = ['data', 'im_info','gt_boxes']
-            #self.label_name = ['gt_boxes']
-            #self.label_name = ['gt_boxes']
-        self.label_name = None
-
-        # status variable for synchronization between get_data and get_label
-        self.cur = 0
-        self.data = None
-        self.label = []
-        self.im_info = None
-
-        # get first batch to fill in provide_data and provide_label
-        self.reset()
-        self.get_batch()
-
-    @property
-    def provide_data(self):
-        return [[(k, v.shape) for k, v in zip(self.data_name, idata)] for idata in self.data]
-
-    @property
-    def provide_label(self):
-        return [None for _ in range(len(self.data))]
-
-    @property
-    def provide_data_single(self):
-        return [(k, v.shape) for k, v in zip(self.data_name, self.data[0])]
-
-    @property
-    def provide_label_single(self):
-        return None
-
-    def reset(self):
-        self.cur = 0
-        if self.shuffle:
-            np.random.shuffle(self.index)
-
-    def iter_next(self):
-        return self.cur < self.size
-
-    def next(self):
-        if self.iter_next():
-            self.get_batch()
-            self.cur += self.batch_size
-            return self.im_info, mx.io.DataBatch(data=self.data, label=self.label,
-                                   pad=self.getpad(), index=self.getindex(),
-                                   provide_data=self.provide_data, provide_label=self.provide_label)
-        else:
-            raise StopIteration
-
-    def getindex(self):
-        return self.cur / self.batch_size
-
-    def getpad(self):
-        if self.cur + self.batch_size > self.size:
-            return self.cur + self.batch_size - self.size
-        else:
-            return 0
-
-    def get_batch(self):
-        cur_from = self.cur
-        cur_to = min(cur_from + self.batch_size, self.size)
-        roidb = [self.roidb[self.index[i]] for i in range(cur_from, cur_to)]
-        if self.has_rpn:
-            data, label, im_info = get_rpn_batch_all(roidb, self.cfg)
-
-        self.data = [[mx.nd.array(idata[name]) for name in self.data_name] for idata in data]
-        self.im_info = im_info
-
-    def get_batch_individual(self):
-        cur_from = self.cur
-        cur_to = min(cur_from + self.batch_size, self.size)
-        roidb = [self.roidb[self.index[i]] for i in range(cur_from, cur_to)]
-        if self.has_rpn:
-            data, label, im_info = get_rpn_batch_all(roidb, self.cfg)
-
-        self.data = [mx.nd.array(data[name]) for name in self.data_name]
-        self.im_info = im_info
+import threading
 
 
 class TestLoader(mx.io.DataIter):
@@ -147,25 +50,46 @@ class TestLoader(mx.io.DataIter):
         self.label = []
         self.im_info = None
 
+        self.lock = threading.Lock()
+        self.lock_data = threading.RLock()
+
         # get first batch to fill in provide_data and provide_label
         self.reset()
         self.get_batch()
 
-    @property
-    def provide_data(self):
-        return [[(k, v.shape) for k, v in zip(self.data_name, idata)] for idata in self.data]
+    def provide_data_func(self, data=None):
+        self.lock_data.acquire()
+        if data is None:
+            data = self.data
+        shape = [[(k, v.shape) for k, v in zip(self.data_name, data[i])] for i in xrange(len(data))]
+        self.lock_data.release()
+        return shape
+    provide_data = property(provide_data_func)
 
-    @property
-    def provide_label(self):
-        return [None for _ in range(len(self.data))]
+    def provide_label_func(self, data=None):
+        self.lock_data.acquire()
+        if data is None:
+            data = self.data
+        shape = [None for _ in range(len(data))]
+        self.lock_data.release()
+        return shape
+    provide_label = property(provide_label_func)
 
-    @property
-    def provide_data_single(self):
-        return [(k, v.shape) for k, v in zip(self.data_name, self.data[0])]
+    def provide_data_single_func(self, data=None):
+        self.lock_data.acquire()
+        if data is None:
+            data = self.data
+        shape = [(k, v.shape) for k, v in zip(self.data_name, data[0])]
+        self.lock_data.release()
+        return shape
+    provide_data_single = property(provide_data_single_func)
 
-    @property
-    def provide_label_single(self):
-        return None
+    def provide_label_single_func(self, data=None):
+        self.lock_data.acquire()
+        shape = None
+        self.lock_data.release()
+        return shape
+    provide_label_single = property(provide_label_single_func)
 
     def reset(self):
         self.cur = 0
@@ -176,45 +100,65 @@ class TestLoader(mx.io.DataIter):
         return self.cur < self.size
 
     def next(self):
+        self.lock.acquire()
         if self.iter_next():
-            self.get_batch()
+            cur_from = self.cur
             self.cur += self.batch_size
-            return self.im_info, mx.io.DataBatch(data=self.data, label=self.label,
-                                   pad=self.getpad(), index=self.getindex(),
-                                   provide_data=self.provide_data, provide_label=self.provide_label)
+            self.lock.release()
+            data, im_info = self.get_batch(cur_from)
+            return im_info, mx.io.DataBatch(data=data, label=self.label,
+                   pad=self.getpad(cur_from), index=self.getindex(cur_from),
+                   provide_data=self.provide_data_func(data), provide_label=self.provide_label_func(data))
         else:
+            self.lock.release()
             raise StopIteration
 
-    def getindex(self):
-        return self.cur / self.batch_size
+    def getindex(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
+        return cur_from / self.batch_size
 
-    def getpad(self):
-        if self.cur + self.batch_size > self.size:
-            return self.cur + self.batch_size - self.size
+    def getpad(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
+        if cur_from + self.batch_size > self.size:
+            return cur_from + self.batch_size - self.size
         else:
             return 0
 
-    def get_batch(self):
-        cur_from = self.cur
+    def get_batch(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
         cur_to = min(cur_from + self.batch_size, self.size)
         roidb = [self.roidb[self.index[i]] for i in range(cur_from, cur_to)]
         if self.has_rpn:
             data, label, im_info = get_rpn_testbatch(roidb, self.cfg)
         else:
             data, label, im_info = get_rcnn_testbatch(roidb, self.cfg)
-        self.data = [[mx.nd.array(idata[name]) for name in self.data_name] for idata in data]
+        data = [[mx.nd.array(idata[name]) for name in self.data_name] for idata in data]
+        self.lock_data.acquire()
+        self.data = data
         self.im_info = im_info
+        self.lock_data.release()
 
-    def get_batch_individual(self):
-        cur_from = self.cur
+        return data, im_info
+
+    def get_batch_individual(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
         cur_to = min(cur_from + self.batch_size, self.size)
         roidb = [self.roidb[self.index[i]] for i in range(cur_from, cur_to)]
         if self.has_rpn:
             data, label, im_info = get_rpn_testbatch(roidb, self.cfg)
         else:
             data, label, im_info = get_rcnn_testbatch(roidb, self.cfg)
+
+        self.lock_data.acquire()
         self.data = [mx.nd.array(data[name]) for name in self.data_name]
         self.im_info = im_info
+        self.lock_data.release()
+
+        return data, im_info
 
 
 class ROIIter(mx.io.DataIter):
@@ -267,25 +211,48 @@ class ROIIter(mx.io.DataIter):
         self.data = None
         self.label = None
 
+        self.lock = threading.Lock()
+        self.lock_data = threading.RLock()
+
         # get first batch to fill in provide_data and provide_label
         self.reset()
         self.get_batch_individual()
 
-    @property
-    def provide_data(self):
-        return [[(k, v.shape) for k, v in zip(self.data_name, self.data[i])] for i in xrange(len(self.data))]
+    def provide_data_func(self, data=None):
+        self.lock_data.acquire()
+        if data is None:
+            data = self.data
+        shape = [[(k, v.shape) for k, v in zip(self.data_name, data[i])] for i in xrange(len(data))]
+        self.lock_data.release()
+        return shape
+    provide_data = property(provide_data_func)
 
-    @property
-    def provide_label(self):
-        return [[(k, v.shape) for k, v in zip(self.label_name, self.label[i])] for i in xrange(len(self.data))]
+    def provide_label_func(self, label=None):
+        self.lock_data.acquire()
+        if label is None:
+            label = self.label
+        shape = [[(k, v.shape) for k, v in zip(self.label_name, label[i])] for i in xrange(len(label))]
+        self.lock_data.release()
+        return shape
+    provide_label = property(provide_label_func)
 
-    @property
-    def provide_data_single(self):
-        return [(k, v.shape) for k, v in zip(self.data_name, self.data[0])]
+    def provide_data_single_func(self, data=None):
+        self.lock_data.acquire()
+        if data is None:
+            data = self.data
+        shape = [(k, v.shape) for k, v in zip(self.data_name, data[0])]
+        self.lock_data.release()
+        return shape
+    provide_data_single = property(provide_data_single_func)
 
-    @property
-    def provide_label_single(self):
-        return [(k, v.shape) for k, v in zip(self.label_name, self.label[0])]
+    def provide_label_single_func(self, label=None):
+        self.lock_data.acquire()
+        if label is None:
+            label = self.label
+        shape = [(k, v.shape) for k, v in zip(self.label_name, label[0])]
+        self.lock_data.release()
+        return shape
+    provide_label_single = property(provide_label_single_func)
 
     def reset(self):
         self.cur = 0
@@ -310,27 +277,36 @@ class ROIIter(mx.io.DataIter):
         return self.cur + self.batch_size <= self.size
 
     def next(self):
+        self.lock.acquire()
         if self.iter_next():
-            self.get_batch_individual()
+            cur_from = self.cur
             self.cur += self.batch_size
-            return mx.io.DataBatch(data=self.data, label=self.label,
-                                   pad=self.getpad(), index=self.getindex(),
-                                   provide_data=self.provide_data, provide_label=self.provide_label)
+            self.lock.release()
+            data, label = self.get_batch_individual(cur_from)
+            return mx.io.DataBatch(data=data, label=label,
+               pad=self.getpad(cur_from), index=self.getindex(cur_from),
+               provide_data=self.provide_data_func(data), provide_label=self.provide_label_func(label))
         else:
+            self.lock.release()
             raise StopIteration
 
-    def getindex(self):
-        return self.cur / self.batch_size
+    def getindex(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
+        return cur_from / self.batch_size
 
-    def getpad(self):
-        if self.cur + self.batch_size > self.size:
-            return self.cur + self.batch_size - self.size
+    def getpad(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
+        if cur_from + self.batch_size > self.size:
+            return cur_from + self.batch_size - self.size
         else:
             return 0
 
-    def get_batch(self):
+    def get_batch(self, cur_from=None):
         # slice roidb
-        cur_from = self.cur
+        if cur_from is None:
+            cur_from = self.cur
         cur_to = min(cur_from + self.batch_size, self.size)
         roidb = [self.roidb[self.index[i]] for i in range(cur_from, cur_to)]
 
@@ -360,12 +336,19 @@ class ROIIter(mx.io.DataIter):
         for key in label_list[0].keys():
             all_label[key] = tensor_vstack([batch[key] for batch in label_list])
 
-        self.data = [mx.nd.array(all_data[name]) for name in self.data_name]
-        self.label = [mx.nd.array(all_label[name]) for name in self.label_name]
+        data = [mx.nd.array(all_data[name]) for name in self.data_name]
+        label = [mx.nd.array(all_label[name]) for name in self.label_name]
+        
+        self.lock_data.acquire()
+        self.data = data
+        self.label = label
+        self.lock_data.release()
 
-    def get_batch_individual(self):
-        # slice roidb
-        cur_from = self.cur
+        return data, label
+
+    def get_batch_individual(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
         cur_to = min(cur_from + self.batch_size, self.size)
         roidb = [self.roidb[self.index[i]] for i in range(cur_from, cur_to)]
 
@@ -385,8 +368,15 @@ class ROIIter(mx.io.DataIter):
 
         all_data = [_['data'] for _ in rst]
         all_label = [_['label'] for _ in rst]
-        self.data = [[mx.nd.array(data[key]) for key in self.data_name] for data in all_data]
-        self.label = [[mx.nd.array(label[key]) for key in self.label_name] for label in all_label]
+        data = [[mx.nd.array(data[key]) for key in self.data_name] for data in all_data]
+        label = [[mx.nd.array(label[key]) for key in self.label_name] for label in all_label]
+
+        self.lock_data.acquire()
+        self.data = data
+        self.label = label
+        self.lock_data.release()
+
+        return data, label
 
     #def parfetch(self, iroidb):
     #    data, label = get_rcnn_batch(iroidb, self.cfg)
@@ -454,25 +444,48 @@ class AnchorLoader(mx.io.DataIter):
         self.data = None
         self.label = None
 
+        self.lock = threading.Lock()
+        self.lock_data = threading.RLock()
+
         # get first batch to fill in provide_data and provide_label
         self.reset()
         self.get_batch_individual()
 
-    @property
-    def provide_data(self):
-        return [[(k, v.shape) for k, v in zip(self.data_name, self.data[i])] for i in xrange(len(self.data))]
+    def provide_data_func(self, data=None):
+        self.lock_data.acquire()
+        if data is None:
+            data = self.data
+        shape = [[(k, v.shape) for k, v in zip(self.data_name, data[i])] for i in xrange(len(data))]
+        self.lock_data.release()
+        return shape
+    provide_data = property(provide_data_func)
 
-    @property
-    def provide_label(self):
-        return [[(k, v.shape) for k, v in zip(self.label_name, self.label[i])] for i in xrange(len(self.data))]
+    def provide_label_func(self, label=None):
+        self.lock_data.acquire()
+        if label is None:
+            label = self.label
+        shape = [[(k, v.shape) for k, v in zip(self.label_name, label[i])] for i in xrange(len(label))]
+        self.lock_data.release()
+        return shape
+    provide_label = property(provide_label_func)
 
-    @property
-    def provide_data_single(self):
-        return [(k, v.shape) for k, v in zip(self.data_name, self.data[0])]
+    def provide_data_single_func(self, data=None):
+        self.lock_data.acquire()
+        if data is None:
+            data = self.data
+        shape = [(k, v.shape) for k, v in zip(self.data_name, data[0])]
+        self.lock_data.release()
+        return shape
+    provide_data_single = property(provide_data_single_func)
 
-    @property
-    def provide_label_single(self):
-        return [(k, v.shape) for k, v in zip(self.label_name, self.label[0])]
+    def provide_label_single_func(self, label=None):
+        self.lock_data.acquire()
+        if label is None:
+            label = self.label
+        shape = [(k, v.shape) for k, v in zip(self.label_name, label[0])]
+        self.lock_data.release()
+        return shape
+    provide_label_single = property(provide_label_single_func)
 
     def reset(self):
         self.cur = 0
@@ -497,21 +510,29 @@ class AnchorLoader(mx.io.DataIter):
         return self.cur + self.batch_size <= self.size
 
     def next(self):
+        self.lock.acquire()
         if self.iter_next():
-            self.get_batch_individual()
+            cur_from = self.cur
             self.cur += self.batch_size
-            return mx.io.DataBatch(data=self.data, label=self.label,
-                                   pad=self.getpad(), index=self.getindex(),
-                                   provide_data=self.provide_data, provide_label=self.provide_label)
+            self.lock.release()
+            data, label = self.get_batch_individual(cur_from)
+            return mx.io.DataBatch(data=data, label=label,
+               pad=self.getpad(cur_from), index=self.getindex(cur_from),
+               provide_data=self.provide_data_func(data), provide_label=self.provide_label_func(label))
         else:
+            self.lock.release()
             raise StopIteration
 
-    def getindex(self):
-        return self.cur / self.batch_size
+    def getindex(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
+        return cur_from / self.batch_size
 
-    def getpad(self):
-        if self.cur + self.batch_size > self.size:
-            return self.cur + self.batch_size - self.size
+    def getpad(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
+        if cur_from + self.batch_size > self.size:
+            return cur_from + self.batch_size - self.size
         else:
             return 0
 
@@ -531,66 +552,9 @@ class AnchorLoader(mx.io.DataIter):
         label_shape = [(k, tuple([input_batch_size] + list(v.shape[1:]))) for k, v in zip(self.label_name, label)]
         return max_data_shape, label_shape
 
-    def get_batch(self):
-        # slice roidb
-        cur_from = self.cur
-        cur_to = min(cur_from + self.batch_size, self.size)
-        roidb = [self.roidb[self.index[i]] for i in range(cur_from, cur_to)]
-
-        # decide multi device slice
-        work_load_list = self.work_load_list
-        ctx = self.ctx
-        if work_load_list is None:
-            work_load_list = [1] * len(ctx)
-        assert isinstance(work_load_list, list) and len(work_load_list) == len(ctx), \
-            "Invalid settings for work load. "
-        slices = _split_input_slice(self.batch_size, work_load_list)
-
-        # get testing data for multigpu
-        data_list = []
-        label_list = []
-        for islice in slices:
-            iroidb = [roidb[i] for i in range(islice.start, islice.stop)]
-            data, label = get_rpn_batch(iroidb, self.cfg)
-            data_list.append(data)
-            label_list.append(label)
-
-        # pad data first and then assign anchor (read label)
-        data_tensor = tensor_vstack([batch['data'] for batch in data_list])
-        for data, data_pad in zip(data_list, data_tensor):
-            data['data'] = data_pad[np.newaxis, :]
-
-        new_label_list = []
-        for data, label in zip(data_list, label_list):
-            # infer label shape
-            data_shape = {k: v.shape for k, v in data.items()}
-            del data_shape['im_info']
-            _, feat_shape, _ = self.feat_sym.infer_shape(**data_shape)
-            feat_shape = [int(i) for i in feat_shape[0]]
-
-            # add gt_boxes to data for e2e
-            data['gt_boxes'] = label['gt_boxes'][np.newaxis, :, :]
-
-            # assign anchor for label
-            label = assign_anchor(feat_shape, label['gt_boxes'], data['im_info'], self.cfg,
-                                  self.feat_stride, self.anchor_scales,
-                                  self.anchor_ratios, self.allowed_border)
-            new_label_list.append(label)
-
-        all_data = dict()
-        for key in self.data_name:
-            all_data[key] = tensor_vstack([batch[key] for batch in data_list])
-
-        all_label = dict()
-        for key in self.label_name:
-            pad = -1 if key == 'label' else 0
-            all_label[key] = tensor_vstack([batch[key] for batch in new_label_list], pad=pad)
-
-        self.data = [mx.nd.array(all_data[key]) for key in self.data_name]
-        self.label = [mx.nd.array(all_label[key]) for key in self.label_name]
-
-    def get_batch_individual(self):
-        cur_from = self.cur
+    def get_batch_individual(self, cur_from=None):
+        if cur_from is None:
+            cur_from = self.cur
         cur_to = min(cur_from + self.batch_size, self.size)
         roidb = [self.roidb[self.index[i]] for i in range(cur_from, cur_to)]
         # decide multi device slice
@@ -607,8 +571,15 @@ class AnchorLoader(mx.io.DataIter):
             rst.append(self.parfetch(iroidb))
         all_data = [_['data'] for _ in rst]
         all_label = [_['label'] for _ in rst]
-        self.data = [[mx.nd.array(data[key]) for key in self.data_name] for data in all_data]
-        self.label = [[mx.nd.array(label[key]) for key in self.label_name] for label in all_label]
+        data = [[mx.nd.array(data[key]) for key in self.data_name] for data in all_data]
+        label = [[mx.nd.array(label[key]) for key in self.label_name] for label in all_label]
+
+        self.lock_data.acquire()
+        self.data = data
+        self.label = label
+        self.lock_data.release()
+
+        return data, label
 
     def parfetch(self, iroidb):
         # get testing data for multigpu
@@ -626,4 +597,5 @@ class AnchorLoader(mx.io.DataIter):
                               self.feat_stride, self.anchor_scales,
                               self.anchor_ratios, self.allowed_border)
         return {'data': data, 'label': label}
+
 

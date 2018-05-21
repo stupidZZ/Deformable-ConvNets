@@ -16,9 +16,7 @@ from module import MutableModule
 from utils import image
 from bbox.bbox_transform import bbox_pred, clip_boxes
 from nms.nms import py_nms_wrapper, py_softnms_wrapper, cpu_nms_wrapper, gpu_nms_wrapper
-from utils.PrefetchingIter import PrefetchingIter
-from im_detect_test import im_detect_v2, py_gtnms_wrapper
-
+from utils.PrefetchingIter import PrefetchingIterV2 as PrefetchingIter
 
 class Predictor(object):
     def __init__(self, symbol, data_names, label_names,
@@ -137,7 +135,7 @@ def im_detect(predictor, data_batch, data_names, scales, cfg):
 
         # save output
         if cfg.TEST.LEARN_NMS:
-            pred_boxes = output['sorted_bbox_output'].asnumpy()
+            pred_boxes = output['learn_nms_sorted_bbox'].asnumpy()
             # raw_scores = output['sorted_score_output'].asnumpy()
             scores = output['nms_final_score_output'].asnumpy()
         else:
@@ -179,8 +177,6 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
 
     assert vis or not test_data.shuffle
     data_names = [k[0] for k in test_data.provide_data[0]]
-    #if cfg.TEST.GT_NMS:
-    #    label_names = [k[0] for k in test_data.provide_label[0]]
 
     if not isinstance(test_data, PrefetchingIter):
         test_data = PrefetchingIter(test_data)
@@ -190,13 +186,10 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
     #else:
     #    nms = py_nms_wrapper(cfg.TEST.NMS)
 
-    if not cfg.TEST.GT_NMS:
-        if cfg.TEST.SOFTNMS:
-            nms = py_softnms_wrapper(cfg.TEST.NMS)
-        else:
-            nms = py_nms_wrapper(cfg.TEST.NMS)
+    if cfg.TEST.SOFTNMS:
+        nms = py_softnms_wrapper(cfg.TEST.NMS)
     else:
-        nms = py_gtnms_wrapper(cfg.TEST.NMS)
+        nms = py_nms_wrapper(cfg.TEST.NMS)
 
 
     # limit detections to max_per_image over all classes
@@ -226,10 +219,6 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
         t2 = time.time() - t
         t = time.time()
         for delta, (scores, boxes, data_dict) in enumerate(zip(scores_all, boxes_all, data_dict_all)):
-            if cfg.TEST.GT_NMS:
-                gt_boxes = data_dict_all[delta]['gt_boxes'].asnumpy()
-                scale = im_info[delta][0,2]
-                gt_boxes[:,0:4] = gt_boxes[:,0:4] / scale
             if cfg.TEST.LEARN_NMS:
                 for j in range(1, imdb.num_classes):
                     indexes = np.where(scores[:, j-1] > thresh)[0]
@@ -241,15 +230,11 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
                         class_lut[j].append(idx + delta)
                         valid_tally += len(cls_scores)
                         valid_sum += len(scores)
-                    if not cfg.TEST.GT_NMS:
-                        if cfg.TEST.SOFTNMS:
-                            all_boxes[j][idx + delta] = nms(cls_dets)
-                        else:
-                            keep = nms(cls_dets)
-                            all_boxes[j][idx + delta] = cls_dets[keep, :]
+                    if cfg.TEST.SOFTNMS:
+                        all_boxes[j][idx + delta] = nms(cls_dets)
                     else:
-                        all_boxes[j][idx + delta] = nms(cls_dets, c_gt_boxes)
-                    # all_boxes[j][idx + delta] = cls_dets
+                        keep = nms(cls_dets)
+                        all_boxes[j][idx + delta] = cls_dets[keep, :]
             else:
                 for j in range(1, imdb.num_classes):
                     indexes = np.where(scores[:, j] > thresh)[0]
@@ -258,9 +243,6 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
                         sort_indices = np.argsort(scores[:, j])[-cfg.TEST.FIRST_N:]
                         # sort_indices = np.argsort(-scores[:, j])[0:cfg.TEST.FIRST_N]
                         indexes = np.intersect1d(sort_indices, indexes)
-                    if cfg.TEST.GT_NMS:
-                        gt_indexes = np.where(gt_boxes[:, 4] == j)[0]
-                        c_gt_boxes = gt_boxes[gt_indexes, :]
 
                     cls_scores = scores[indexes, j, np.newaxis]
                     cls_boxes = boxes[indexes, 4:8] if cfg.CLASS_AGNOSTIC else boxes[indexes, j * 4:(j + 1) * 4]
@@ -274,14 +256,11 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
                         # cls_scores[cls_scores <= thresh] = thresh
                         # cls_boxes = boxes[:, 4:8] if cfg.CLASS_AGNOSTIC else boxes[:, j * 4:(j + 1) * 4]
                     cls_dets = np.hstack((cls_boxes, cls_scores))
-                    if not cfg.TEST.GT_NMS:
-                        if cfg.TEST.SOFTNMS:
-                            all_boxes[j][idx + delta] = nms(cls_dets)
-                        else:
-                            keep = nms(cls_dets)
-                            all_boxes[j][idx + delta] = cls_dets[keep, :]
+                    if cfg.TEST.SOFTNMS:
+                        all_boxes[j][idx + delta] = nms(cls_dets)
                     else:
-                        all_boxes[j][idx + delta] = nms(cls_dets, c_gt_boxes)
+                        keep = nms(cls_dets)
+                        all_boxes[j][idx + delta] = cls_dets[keep, :]
 
             if max_per_image > 0:
                 image_scores = np.hstack([all_boxes[j][idx+delta][:, -1]

@@ -20,7 +20,7 @@ from core.module import MutableModule
 from bbox.bbox_regression import add_bbox_regression_targets
 from utils.load_data import load_proposal_roidb, merge_roidb, filter_roidb
 from utils.load_model import load_param
-from utils.PrefetchingIter import PrefetchingIter
+from utils.PrefetchingIter import PrefetchingIterV2 as PrefetchingIter
 from utils.lr_scheduler import WarmupMultiFactorScheduler
 
 

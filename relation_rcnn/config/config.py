@@ -171,7 +171,6 @@ config.TEST.PROPOSAL_MIN_SIZE = config.network.RPN_FEAT_STRIDE
 
 # whether to use softnms
 config.TEST.SOFTNMS = False
-config.TEST.GT_NMS = False
 # whether to use LEARN_NMS
 config.TEST.LEARN_NMS = False
 config.TEST.FIRST_N = 0

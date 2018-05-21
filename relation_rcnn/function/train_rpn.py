@@ -17,7 +17,7 @@ from core.loader import AnchorLoader
 from core.module import MutableModule
 from utils.load_data import load_gt_roidb, merge_roidb, filter_roidb
 from utils.load_model import load_param
-from utils.PrefetchingIter import PrefetchingIter
+from utils.PrefetchingIter import PrefetchingIterV2 as PrefetchingIter
 from utils.lr_scheduler import WarmupMultiFactorScheduler
 
 
