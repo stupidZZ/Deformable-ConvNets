@@ -159,7 +159,7 @@ TEST:
   # RCNN nms
   NMS: 10.0
   SOFTNMS: true
-  test_epoch: 0
+  test_epoch: 8
   max_per_image: 100
   # Learn nms
   LEARN_NMS: true
