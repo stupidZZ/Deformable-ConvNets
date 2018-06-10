@@ -207,6 +207,9 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
 
     idx = 0
     t = time.time()
+    inference_count = 0
+    all_inference_time = []
+    post_processing_time = []
     for im_info, data_batch in test_data:
         t1 = time.time() - t
         t = time.time()
@@ -230,11 +233,12 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
                         class_lut[j].append(idx + delta)
                         valid_tally += len(cls_scores)
                         valid_sum += len(scores)
-                    if cfg.TEST.SOFTNMS:
-                        all_boxes[j][idx + delta] = nms(cls_dets)
-                    else:
-                        keep = nms(cls_dets)
-                        all_boxes[j][idx + delta] = cls_dets[keep, :]
+                    # if cfg.TEST.SOFTNMS:
+                    #     all_boxes[j][idx + delta] = nms(cls_dets)
+                    # else:
+                    #     keep = nms(cls_dets)
+                    #     all_boxes[j][idx + delta] = cls_dets[keep, :]
+                    all_boxes[j][idx + delta] = cls_dets
             else:
                 for j in range(1, imdb.num_classes):
                     indexes = np.where(scores[:, j] > thresh)[0]
@@ -278,6 +282,13 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
         idx += test_data.batch_size
         t3 = time.time() - t
         t = time.time()
+        post_processing_time.append(t3)
+        all_inference_time.append(t1 + t2 + t3)
+        inference_count += 1
+        if inference_count % 200 == 0:
+            valid_count = 500 if inference_count > 500 else inference_count
+            print("--->> running-average inference time per batch: {}".format(float(sum(all_inference_time[-valid_count:]))/valid_count))
+            print("--->> running-average post processing time per batch: {}".format(float(sum(post_processing_time[-valid_count:]))/valid_count))
         print 'testing {}/{} data {:.4f}s net {:.4f}s post {:.4f}s'.format(idx, imdb.num_images, t1, t2, t3)
         if logger:
             logger.info('testing {}/{} data {:.4f}s net {:.4f}s post {:.4f}s'.format(idx, imdb.num_images, t1, t2, t3))
@@ -328,34 +339,3 @@ def vis_all_detection(im_array, detections, class_names, scale, cfg, threshold=1
                            bbox=dict(facecolor=color, alpha=0.5), fontsize=12, color='white')
     plt.show()
 
-
-def draw_all_detection(im_array, detections, class_names, scale, cfg, threshold=1e-1):
-    """
-    visualize all detections in one image
-    :param im_array: [b=1 c h w] in rgb
-    :param detections: [ numpy.ndarray([[x1 y1 x2 y2 score]]) for j in classes ]
-    :param class_names: list of names in imdb
-    :param scale: visualize the scaled image
-    :return:
-    """
-    import cv2
-    import random
-    color_white = (255, 255, 255)
-    im = image.transform_inverse(im_array, cfg.network.PIXEL_MEANS)
-    # change to bgr
-    im = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-    for j, name in enumerate(class_names):
-        if name == '__background__':
-            continue
-        color = (random.randint(0, 256), random.randint(0, 256), random.randint(0, 256))  # generate a random color
-        dets = detections[j]
-        for det in dets:
-            bbox = det[:4] * scale
-            score = det[-1]
-            if score < threshold:
-                continue
-            bbox = map(int, bbox)
-            cv2.rectangle(im, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color=color, thickness=2)
-            cv2.putText(im, '%s %.3f' % (class_names[j], score), (bbox[0], bbox[1] + 10),
-                        color=color_white, fontFace=cv2.FONT_HERSHEY_COMPLEX, fontScale=0.5)
-    return im

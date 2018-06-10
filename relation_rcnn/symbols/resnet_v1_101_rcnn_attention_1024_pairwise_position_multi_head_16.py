@@ -245,7 +245,6 @@ class resnet_v1_101_rcnn_attention_1024_pairwise_position_multi_head_16(resnet_v
             gt_boxes_reshape = mx.sym.Reshape(data=gt_boxes, shape=(-1, 5), name='gt_boxes_reshape')
 
         nongt_dim = cfg.TRAIN.RPN_POST_NMS_TOP_N if is_train else cfg.TEST.RPN_POST_NMS_TOP_N
-        # position_feat = mx.sym.Custom(rois=rois, op_type='extract_position_feat', feat_dim=1024)
         # fc_position = mx.symbol.FullyConnected(name='fc_position', data=position_feat, num_hidden=1024)
         #fc_position_relu =  mx.sym.Activation(data=fc_position, act_type='relu', name='fc_position_relu')
         conv_new_1 = mx.sym.Convolution(data=relu1, kernel=(1, 1), num_filter=256, name="conv_new_1")
@@ -253,8 +252,6 @@ class resnet_v1_101_rcnn_attention_1024_pairwise_position_multi_head_16(resnet_v
 
         roi_pool = mx.symbol.ROIPooling(
             name='roi_pool', data=conv_new_1_relu, rois=rois, pooled_size=(7, 7), spatial_scale=0.0625)
-        # mask, overlap = mx.sym.Custom(name='mask', op_type='compute_overlap_mask', rois_left=rois,
-        #                               rois_right=rois_nongt)
         sliced_rois = mx.sym.slice_axis(rois, axis=1, begin=1, end=None)
         # [num_rois, nongt_dim, 4]
         position_matrix = self.extract_position_matrix(sliced_rois, nongt_dim=nongt_dim)

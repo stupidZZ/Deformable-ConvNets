@@ -15,6 +15,7 @@ import mxnet as mx
 from mxnet import nd
 import numpy as np
 import math
+import time
 
 def extract_pairwise_multi_position_embedding_nd(position_mat, feat_dim, wave_length=1000):
     """ Extract multi-class position embedding
@@ -234,6 +235,7 @@ class LearnNmsOperator(mx.operator.CustomOp):
         self.class_thresh = class_thresh
 
     def forward(self, is_train, req, in_data, out_data, aux):
+        nms_start_time = time.time()
         #inputs
         cls_score = in_data[0]
         bbox_pred = in_data[1]
@@ -377,6 +379,21 @@ class LearnNmsOperator(mx.operator.CustomOp):
         # sorted_score_reshape = nd.BlockGrad(sorted_score_reshape)
         nms_multi_score = nd.broadcast_mul(lhs=sorted_score_reshape, rhs=full_nms_conditional_score)
 
+        all_time = time.time() - nms_start_time
+        if 'learn_nms_time' not in globals().keys() or 'learn_nms_count' not in globals().keys():
+            globals()['learn_nms_time'] = []
+            globals()['learn_nms_count'] = 0
+
+        if globals()['learn_nms_count'] >= 1000:
+            globals()['learn_nms_time'].pop(0)
+            globals()['learn_nms_time'].append(all_time)
+        else:
+            globals()['learn_nms_time'].append(all_time)
+
+        globals()['learn_nms_count'] += 1
+        if globals()['learn_nms_count'] % 500 == 0:
+            print("--->> learn nms running average time cost: {}".format(float(sum(globals()['learn_nms_time']))/(1000 if globals()['learn_nms_count'] > 1000 else globals()['learn_nms_count'])))
+
         self.assign(out_data[0], req[0], nms_multi_score)
         self.assign(out_data[1], req[1], sorted_bbox)
         self.assign(out_data[2], req[2], sorted_score)
@@ -393,7 +410,7 @@ class LearnNmsProp(mx.operator.CustomOpProp):
         super(LearnNmsProp, self).__init__(need_top_grad=False)
         self.num_fg_classes = int(num_fg_classes)
         self.nongt_dim = int(nongt_dim) if nongt_dim != 'None' else None
-        self.class_thresh = class_thresh
+        self.class_thresh = float(class_thresh)
         # gluon customops use , to separate elements, make sure this doesn't happend
         assert ',' not in bbox_means and ',' not in bbox_stds 
         if bbox_means == 'None' or bbox_stds == 'None':

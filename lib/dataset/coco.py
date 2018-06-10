@@ -9,10 +9,6 @@ from imdb import IMDB
 # coco api
 from .pycocotools.coco import COCO
 from .pycocotools.cocoeval import COCOeval
-from .pycocotools import mask as COCOmask
-from utils.mask_coco2voc import mask_coco2voc
-from utils.mask_voc2coco import mask_voc2coco
-from utils.tictoc import tic, toc
 from bbox.bbox_transform import clip_boxes
 import multiprocessing as mp
 
@@ -25,8 +21,6 @@ def coco_results_one_category_kernel(data_pack):
     boxes = data_pack['boxes']
     if ann_type == 'bbox':
         masks = []
-    elif ann_type == 'segm':
-        masks = data_pack['masks']
     else:
         print 'unimplemented ann_type: ' + ann_type
     cat_results = []
@@ -45,15 +39,6 @@ def coco_results_one_category_kernel(data_pack):
                        'category_id': cat_id,
                        'bbox': [xs[k], ys[k], ws[k], hs[k]],
                        'score': scores[k]} for k in xrange(dets.shape[0])]
-        elif ann_type == 'segm':
-            width = im_info['width']
-            height = im_info['height']
-            dets[:, :4] = clip_boxes(dets[:, :4], [height, width])
-            mask_encode = mask_voc2coco(masks[im_ind], dets[:, :4], height, width, binary_thresh)
-            result = [{'image_id': index,
-                       'category_id': cat_id,
-                       'segmentation': mask_encode[k],
-                       'score': scores[k]} for k in xrange(len(mask_encode))]
         cat_results.extend(result)
     return cat_results
 
@@ -183,80 +168,6 @@ class coco(IMDB):
                    'is_gt': np.ones(boxes.shape[0])}
         return roi_rec
 
-    def mask_path_from_index(self, index):
-        """
-        given image index, cache high resolution mask and return full path of masks
-        :param index: index of a specific image
-        :return: full path of this mask
-        """
-        if self.data_name == 'val':
-            return []
-        cache_file = os.path.join(self.cache_path, 'COCOMask', self.data_name)
-        if not os.path.exists(cache_file):
-            os.makedirs(cache_file)
-        # instance level segmentation
-        filename = 'COCO_%s_%012d' % (self.data_name, index)
-        gt_mask_file = os.path.join(cache_file, filename + '.hkl')
-        return gt_mask_file
-
-    def load_coco_sds_annotation(self, index):
-        """
-        coco ann: [u'segmentation', u'area', u'iscrowd', u'image_id', u'bbox', u'category_id', u'id']
-        iscrowd:
-            crowd instances are handled by marking their overlaps with all categories to -1
-            and later excluded in training
-        bbox:
-            [x1, y1, w, h]
-        :param index: coco image id
-        :return: roidb entry
-        """
-        im_ann = self.coco.loadImgs(index)[0]
-        width = im_ann['width']
-        height = im_ann['height']
-
-        # only load objs whose iscrowd==false
-        annIds = self.coco.getAnnIds(imgIds=index, iscrowd=False)
-        objs = self.coco.loadAnns(annIds)
-
-        # sanitize bboxes
-        valid_objs = []
-        for obj in objs:
-            x, y, w, h = obj['bbox']
-            x1 = np.max((0, x))
-            y1 = np.max((0, y))
-            x2 = np.min((width - 1, x1 + np.max((0, w - 1))))
-            y2 = np.min((height - 1, y1 + np.max((0, h - 1))))
-            if obj['area'] > 0 and x2 >= x1 and y2 >= y1:
-                obj['clean_bbox'] = [x1, y1, x2, y2]
-                valid_objs.append(obj)
-        objs = valid_objs
-        num_objs = len(objs)
-
-        boxes = np.zeros((num_objs, 4), dtype=np.uint16)
-        gt_classes = np.zeros((num_objs), dtype=np.int32)
-        overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
-
-        for ix, obj in enumerate(objs):
-            cls = self._coco_ind_to_class_ind[obj['category_id']]
-            boxes[ix, :] = obj['clean_bbox']
-            gt_classes[ix] = cls
-            if obj['iscrowd']:
-                overlaps[ix, :] = -1.0
-            else:
-                overlaps[ix, cls] = 1.0
-
-        sds_rec = {'image': self.image_path_from_index(index),
-                   'height': height,
-                   'width': width,
-                   'boxes': boxes,
-                   'gt_classes': gt_classes,
-                   'gt_overlaps': overlaps,
-                   'max_classes': overlaps.argmax(axis=1),
-                   'max_overlaps': overlaps.max(axis=1),
-                   'cache_seg_inst': self.mask_path_from_index(index),
-                   'flipped': False}
-        return sds_rec, objs
-
     def evaluate_detections(self, detections, ann_type='bbox', all_masks=None):
         """ detections_val2014_results.json """
         res_folder = os.path.join(self.result_path, 'results')
@@ -267,10 +178,6 @@ class coco(IMDB):
         if 'test' not in self.image_set:
             info_str = self._do_python_eval(res_file, res_folder, ann_type)
             return info_str
-
-    def evaluate_sds(self, all_boxes, all_masks):
-        info_str = self.evaluate_detections(all_boxes, 'segm', all_masks)
-        return info_str
 
     def _write_coco_results(self, all_boxes, res_file, ann_type, all_masks):
         """ example results
@@ -292,16 +199,6 @@ class coco(IMDB):
                           'binary_thresh': self.binary_thresh,
                           'all_im_info': all_im_info,
                           'boxes': all_boxes[cls_ind]}
-                         for cls_ind, cls in enumerate(self.classes) if not cls == '__background__']
-        elif ann_type == 'segm':
-            data_pack = [{'cat_id': self._class_to_coco_ind[cls],
-                          'cls_ind': cls_ind,
-                          'cls': cls,
-                          'ann_type': ann_type,
-                          'binary_thresh': self.binary_thresh,
-                          'all_im_info': all_im_info,
-                          'boxes': all_boxes[cls_ind],
-                          'masks': all_masks[cls_ind]}
                          for cls_ind, cls in enumerate(self.classes) if not cls == '__background__']
         else:
             print 'unimplemented ann_type: '+ann_type

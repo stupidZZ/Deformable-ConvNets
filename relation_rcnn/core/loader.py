@@ -11,7 +11,7 @@ from mxnet.executor_manager import _split_input_slice
 
 from config.config import config
 from utils.image import tensor_vstack
-from rpn.rpn import get_rpn_testbatch, get_rpn_batch, assign_anchor, get_rpn_batch_all
+from rpn.rpn import get_rpn_testbatch, get_rpn_batch, assign_anchor
 from rcnn import get_rcnn_testbatch, get_rcnn_batch
 import threading
 

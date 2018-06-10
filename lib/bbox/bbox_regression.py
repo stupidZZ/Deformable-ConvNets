@@ -55,7 +55,7 @@ def compute_bbox_regression_targets(rois, overlaps, labels, cfg):
 def add_bbox_regression_targets(roidb, cfg):
     """
     given roidb, add ['bbox_targets'] and normalize bounding box regression targets
-    :param roidb: roidb to be processed. must have gone through imdb.prepare_roidb
+    :param roidb: roidb to be processed.
     :return: means, std variances of targets
     """
     print 'add bounding box regression targets'

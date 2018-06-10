@@ -54,21 +54,3 @@ def filter_roidb(roidb, config):
     print 'filtered %d roidb entries: %d -> %d' % (num - num_after, num, num_after)
 
     return filtered_roidb
-
-
-def load_gt_segdb(dataset_name, image_set_name, root_path, dataset_path, result_path=None,
-                  flip=False):
-    """ load ground truth segdb """
-    imdb = eval(dataset_name)(image_set_name, root_path, dataset_path, result_path)
-    segdb = imdb.gt_segdb()
-    if flip:
-        segdb = imdb.append_flipped_images_for_segmentation(segdb)
-    return segdb
-
-
-def merge_segdb(segdbs):
-    """ segdb are list, concat them together """
-    segdb = segdbs[0]
-    for r in segdbs[1:]:
-        segdb.extend(r)
-    return segdb

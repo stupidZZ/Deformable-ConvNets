@@ -41,7 +41,6 @@ import mxnet as mx
 from function.train_rpn import train_rpn
 from function.test_rpn import test_rpn
 from function.train_rcnn import train_rcnn
-from utils.combine_model import combine_model
 from utils.create_logger import create_logger
 
 
