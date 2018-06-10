@@ -1346,6 +1346,7 @@ class resnet_v1_101_rcnn_fpn_attention_1024_pairwise_position_multi_head_16_lear
                 'first_n':first_n, 
                 'class_agnostic': cfg.CLASS_AGNOSTIC, 
                 'num_thresh': num_thresh, 
+                'class_thresh': cfg.TEST.LEARN_NMS_CLASS_SCORE_TH, 
                 'nongt_dim': None, 
                 'has_non_gt_index':(non_gt_index is not None)
             }

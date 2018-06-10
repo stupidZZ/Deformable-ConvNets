@@ -215,7 +215,7 @@ def refine_bbox_nd(bbox, bbox_delta, im_info=None, means=None, stds=None):
     return refined_bbox
 
 class LearnNmsOperator(mx.operator.CustomOp):
-    def __init__(self, num_fg_classes, bbox_means, bbox_stds, first_n, class_agnostic, num_thresh, 
+    def __init__(self, num_fg_classes, bbox_means, bbox_stds, first_n, class_agnostic, num_thresh, class_thresh, 
             nongt_dim=None, has_non_gt_index=False, nms_attention_feat_dim=128, 
             nms_attention_group=16, nms_attention_fc_dim=(64, 16), nms_attention_dim=(1024, 1024, 128)):
         super(LearnNmsOperator, self).__init__()
@@ -231,6 +231,7 @@ class LearnNmsOperator(mx.operator.CustomOp):
         self.nms_attention_group = nms_attention_group
         self.nms_attention_fc_dim = nms_attention_fc_dim
         self.nms_attention_dim = nms_attention_dim
+        self.class_thresh = class_thresh
 
     def forward(self, is_train, req, in_data, out_data, aux):
         #inputs
@@ -291,7 +292,7 @@ class LearnNmsOperator(mx.operator.CustomOp):
         max_score_per_class = sorted_score.max(axis=0)
         max_score_per_class_numpy = max_score_per_class.asnumpy()
 
-        valid_class_thresh = 0.01 * self.first_n / 100. # to speed up evaluation, increate 0.01, but may harm results
+        valid_class_thresh = self.class_thresh
         valid_class_thresh = np.minimum(valid_class_thresh, max_score_per_class_numpy.max())
         valid_class_indices = np.where(max_score_per_class_numpy >= valid_class_thresh)[0]
         invalid_class_indices = np.where(max_score_per_class_numpy < valid_class_thresh)[0]
@@ -388,10 +389,11 @@ class LearnNmsOperator(mx.operator.CustomOp):
 @mx.operator.register('learn_nms')
 class LearnNmsProp(mx.operator.CustomOpProp):
     def __init__(self, num_fg_classes, bbox_means, bbox_stds, first_n, 
-            class_agnostic, num_thresh, nongt_dim, has_non_gt_index):
+            class_agnostic, num_thresh, class_thresh, nongt_dim, has_non_gt_index):
         super(LearnNmsProp, self).__init__(need_top_grad=False)
         self.num_fg_classes = int(num_fg_classes)
         self.nongt_dim = int(nongt_dim) if nongt_dim != 'None' else None
+        self.class_thresh = class_thresh
         # gluon customops use , to separate elements, make sure this doesn't happend
         assert ',' not in bbox_means and ',' not in bbox_stds 
         if bbox_means == 'None' or bbox_stds == 'None':
@@ -430,7 +432,7 @@ class LearnNmsProp(mx.operator.CustomOpProp):
 
     def create_operator(self, ctx, shapes, dtypes):
         return LearnNmsOperator(self.num_fg_classes, self.bbox_means, self.bbox_stds, self.first_n, 
-            self.class_agnostic, self.num_thresh, self.nongt_dim, self.has_non_gt_index)
+            self.class_agnostic, self.num_thresh, self.class_thresh, self.nongt_dim, self.has_non_gt_index)
 
     def declare_backward_dependency(self, out_grad, in_data, out_data):
         return []

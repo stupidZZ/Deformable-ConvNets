@@ -1274,7 +1274,8 @@ class resnet_v1_101_rcnn_dcn_attention_1024_pairwise_position_multi_head_16_lear
                 op_type='learn_nms', name='learn_nms',
                 num_fg_classes=num_fg_classes,
                 bbox_means=bbox_means, bbox_stds=bbox_stds, first_n=first_n,
-                class_agnostic=cfg.CLASS_AGNOSTIC, num_thresh=num_thresh, nongt_dim=nongt_dim, has_non_gt_index=False)
+                class_agnostic=cfg.CLASS_AGNOSTIC, num_thresh=num_thresh, 
+                class_thresh=cfg.TEST.LEARN_NMS_CLASS_SCORE_TH, nongt_dim=nongt_dim, has_non_gt_index=False)
 
         if is_train:
             nms_multi_target = mx.sym.Custom(bbox=sorted_bbox, gt_bbox=gt_boxes, score=sorted_score,

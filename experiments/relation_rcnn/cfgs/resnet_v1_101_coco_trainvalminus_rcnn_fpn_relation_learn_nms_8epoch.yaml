@@ -163,5 +163,6 @@ TEST:
   max_per_image: 100
   # Learn nms
   LEARN_NMS: true
+  LEARN_NMS_CLASS_SCORE_TH: 0.05
   FIRST_N: 150
 

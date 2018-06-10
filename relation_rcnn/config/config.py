@@ -182,6 +182,8 @@ config.TEST.max_per_image = 300
 
 # Test Model Epoch
 config.TEST.test_epoch = 0
+# increasing this thresh will speed up test-time learn nms module, but may hurt performance
+config.TEST.LEARN_NMS_CLASS_SCORE_TH = 0.01
 
 
 def update_config(config_file):
