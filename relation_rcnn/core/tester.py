@@ -1,11 +1,9 @@
 # --------------------------------------------------------
-# Deformable Convolutional Networks
-# Copyright (c) 2016 by Contributors
-# Copyright (c) 2017 Microsoft
-# Licensed under The Apache-2.0 License [see LICENSE for details]
-# Modified by Yuwen Xiong
+# Relation Networks
+# Copyright (c) 2018 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Jiayuan Gu, Dazhi Cheng
 # --------------------------------------------------------
-
 import cPickle
 import os
 import time
@@ -233,11 +231,6 @@ def pred_eval(predictor, test_data, imdb, cfg, vis=False, thresh=1e-3, logger=No
                         class_lut[j].append(idx + delta)
                         valid_tally += len(cls_scores)
                         valid_sum += len(scores)
-                    # if cfg.TEST.SOFTNMS:
-                    #     all_boxes[j][idx + delta] = nms(cls_dets)
-                    # else:
-                    #     keep = nms(cls_dets)
-                    #     all_boxes[j][idx + delta] = cls_dets[keep, :]
                     all_boxes[j][idx + delta] = cls_dets
             else:
                 for j in range(1, imdb.num_classes):

@@ -1,12 +1,9 @@
 # --------------------------------------------------------
-# Deformable Convolutional Networks
-# Copyright (c) 2016 by Contributors
-# Copyright (c) 2017 Microsoft
-# Licensed under The Apache-2.0 License [see LICENSE for details]
-# Modified by Yuwen Xiong
-# Modified by Dazhi Cheng
+# Relation Networks
+# Copyright (c) 2018 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Jiayuan Gu, Dazhi Cheng
 # --------------------------------------------------------
-
 """A `MutableModule` implement the `BaseModule` API, and allows input shape
 varying with training iterations. If shapes vary, executors will rebind,
 using shared arrays from the initial module binded with maximum shape.

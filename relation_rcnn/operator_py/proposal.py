@@ -1,3 +1,9 @@
+# --------------------------------------------------------
+# Relation Networks
+# Copyright (c) 2018 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Jiayuan Gu, Dazhi Cheng
+# --------------------------------------------------------
 """
 Proposal Operator transform anchor coordinates into ROI coordinates with prediction results on
 classification probability and bounding box prediction results, and image size and scale information.

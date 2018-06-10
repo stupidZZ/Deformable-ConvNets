@@ -1,11 +1,9 @@
 # --------------------------------------------------------
-# Deformable Convolutional Networks
-# Copyright (c) 2017 Microsoft
-# Licensed under The Apache-2.0 License [see LICENSE for details]
-# Written by Guodong Zhang
-# Modified by Bin Xiao
+# Relation Networks
+# Copyright (c) 2018 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Jiayuan Gu, Dazhi Cheng
 # --------------------------------------------------------
-
 import cPickle
 import math
 import mxnet as mx

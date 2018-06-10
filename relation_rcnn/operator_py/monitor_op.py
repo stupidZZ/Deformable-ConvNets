@@ -1,3 +1,9 @@
+# --------------------------------------------------------
+# Relation Networks
+# Copyright (c) 2018 Microsoft
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Jiayuan Gu, Dazhi Cheng
+# --------------------------------------------------------
 import mxnet as mx
 import numpy as np
 from distutils.util import strtobool
