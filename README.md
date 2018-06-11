@@ -48,9 +48,9 @@ If you find Relation Networks useful in your research, please consider citing:
 
 |                                 | <sub>training data</sub> | <sub>testing data</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> | <sub>Inference Time</sub> | <sub>NMS Time</sub> |
 |---------------------------------|---------------|---------------|------|---------|---------|-------|-------|-------|---------------------------------|---------------------------------|
-| <sub>Deformable Faster RCNN<br />2FC + nms(0.5)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 37.2 | 58.1 | 40.0 | 16.4 | 41.3 | 55.5 | 0.180s | 0.022s |
-| <sub>Deformable Faster RCNN<br />2FC + softnms(0.6)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 37.5 | 57.3 | 41.0 | 16.6 | 41.7 | 55.8 | 0.208s | 0.052s |
-| <sub>Deformable Faster RCNN<br />2FC + Relation Module + Learn NMS(e2e)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 38.4 | 57.6 | 41.6 | 18.2 | 43.1 | 56.6 | 0.204s | 0.025s |
+| <sub>2FC + nms(0.5)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 37.2 | 58.1 | 40.0 | 16.4 | 41.3 | 55.5 | 0.180s | 0.022s |
+| <sub>2FC + softnms(0.6)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 37.5 | 57.3 | 41.0 | 16.6 | 41.7 | 55.8 | 0.208s | 0.052s |
+| <sub>2FC + Relation Module + Learn NMS(e2e)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 38.4 | 57.6 | 41.6 | 18.2 | 43.1 | 56.6 | 0.204s | 0.025s |
 
 #### FPN
 
