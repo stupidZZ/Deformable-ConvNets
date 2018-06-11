@@ -34,31 +34,31 @@ If you find Relation Networks useful in your research, please consider citing:
 
 ## Main Results
 
-Faster RCNN:
+#### Faster RCNN
 
 |                                 | <sub>training data</sub> | <sub>testing data</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> | <sub>Inference Time</sub> | <sub>Post Processing Time</sub> |
 |---------------------------------|---------------|---------------|------|---------|---------|-------|-------|-------|---------------------------------|---------------------------------|
-| <sub>Faster RCNN<br />2FC + nms(0.5)<br /> ResNet-v1-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 32.3 | 52.8 | 34.1 | 11.1 | 35.9 | 51.8 | 0.168s | 0.025s |
-| <sub>Faster RCNN<br />2FC + softnms(0.6)<br /> ResNet-v1-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 32.3 | 52.8 | 34.1 | 11.1 | 35.9 | 51.8 | 0.200s | 0.060s |
-| <sub>Faster RCNN<br />2FC + Relation Module + softnms<br />ResNet-v1-101</sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 34.7 | 55.3 | 37.2 | 13.7 | 38.8 | 53.6 | 0.211s | 0.059s |
-| <sub>Faster RCNN<br />2FC + Learn NMS </br>ResNet-v1-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 32.6 | 51.8 |  35.0  | 11.8 | 36.6 | 52.1 | 0.162s | 0.020s |
-| <sub> Faster RCNN<br />2FC + Relation Module + Learn NMS(e2e)<br />ResNet-v1-101</sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 35.2 | 55.5 | 38.0 | 15.2 | 39.2 | 54.1 | 0.188s | 0.024s |
+| <sub>2FC + nms(0.5)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 32.3 | 52.8 | 34.1 | 11.1 | 35.9 | 51.8 | 0.168s | 0.025s |
+| <sub>2FC + softnms(0.6)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 32.3 | 52.8 | 34.1 | 11.1 | 35.9 | 51.8 | 0.200s | 0.060s |
+| <sub>2FC + Relation Module + softnms<br />ResNet-101</sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 34.7 | 55.3 | 37.2 | 13.7 | 38.8 | 53.6 | 0.211s | 0.059s |
+| <sub>2FC + Learn NMS </br>ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 32.6 | 51.8 |  35.0  | 11.8 | 36.6 | 52.1 | 0.162s | 0.020s |
+| <sub>2FC + Relation Module + Learn NMS(e2e)<br />ResNet-101</sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 35.2 | 55.5 | 38.0 | 15.2 | 39.2 | 54.1 | 0.188s | 0.024s |
 
-Deformable Faster RCNN:
-
-|                                 | <sub>training data</sub> | <sub>testing data</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> | <sub>Inference Time</sub> | <sub>NMS Time</sub> |
-|---------------------------------|---------------|---------------|------|---------|---------|-------|-------|-------|---------------------------------|---------------------------------|
-| <sub>Deformable Faster RCNN<br />2FC + nms(0.5)<br /> ResNet-v1-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 37.2 | 58.1 | 40.0 | 16.4 | 41.3 | 55.5 | 0.180s | 0.022s |
-| <sub>Deformable Faster RCNN<br />2FC + softnms(0.6)<br /> ResNet-v1-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 37.5 | 57.3 | 41.0 | 16.6 | 41.7 | 55.8 | 0.208s | 0.052s |
-| <sub>Deformable Faster RCNN<br />2FC + Relation Module + Learn NMS(e2e)<br /> ResNet-v1-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 38.4 | 57.6 | 41.6 | 18.2 | 43.1 | 56.6 | 0.204s | 0.025s |
-
-FPN:
+#### Deformable Faster RCNN
 
 |                                 | <sub>training data</sub> | <sub>testing data</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> | <sub>Inference Time</sub> | <sub>NMS Time</sub> |
 |---------------------------------|---------------|---------------|------|---------|---------|-------|-------|-------|---------------------------------|---------------------------------|
-| <sub>FPN<br />2FC + nms(0.5)<br /> ResNet-v1-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 36.6 | 59.3 | 39.3 | 20.3 | 40.5 | 49.4 | 0.196s | 0.037s |
-| <sub>FPN<br />2FC + softnms(0.6)<br /> ResNet-v1-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 36.8 | 57.8 | 40.7 | 20.4 | 40.8 | 49.7 | 0.323s | 0.167s |
-| <sub>FPN + <br />2FC + Relation Module + Learn NMS(e2e)<br /> ResNet-v1-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 38.8 | 60.1 | 43.2 | 22.3 | 42.3 | 52.6 | 0.422s | 0.018s |
+| <sub>Deformable Faster RCNN<br />2FC + nms(0.5)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 37.2 | 58.1 | 40.0 | 16.4 | 41.3 | 55.5 | 0.180s | 0.022s |
+| <sub>Deformable Faster RCNN<br />2FC + softnms(0.6)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 37.5 | 57.3 | 41.0 | 16.6 | 41.7 | 55.8 | 0.208s | 0.052s |
+| <sub>Deformable Faster RCNN<br />2FC + Relation Module + Learn NMS(e2e)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 38.4 | 57.6 | 41.6 | 18.2 | 43.1 | 56.6 | 0.204s | 0.025s |
+
+#### FPN
+
+|                                 | <sub>training data</sub> | <sub>testing data</sub>  | <sub>mAP</sub>  | <sub>mAP@0.5</sub> | <sub>mAP@0.75</sub>| <sub>mAP@S</sub> | <sub>mAP@M</sub> | <sub>mAP@L</sub> | <sub>Inference Time</sub> | <sub>NMS Time</sub> |
+|---------------------------------|---------------|---------------|------|---------|---------|-------|-------|-------|---------------------------------|---------------------------------|
+| <sub>2FC + nms(0.5)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 36.6 | 59.3 | 39.3 | 20.3 | 40.5 | 49.4 | 0.196s | 0.037s |
+| <sub>2FC + softnms(0.6)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 36.8 | 57.8 | 40.7 | 20.4 | 40.8 | 49.7 | 0.323s | 0.167s |
+| <sub>2FC + Relation Module + Learn NMS(e2e)<br /> ResNet-101 </sub> | <sub>coco trainval35k</sub> | <sub>coco minival</sub> | 38.8 | 60.1 | 43.2 | 22.3 | 42.3 | 52.6 | 0.422s | 0.018s |
 
 
 *Running time is counted on a single Maxwell Titan X GPU (mini-batch size is 1 in inference).*
