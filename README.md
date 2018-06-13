@@ -1,7 +1,7 @@
 # Relation Networks
 
 
-The major contributors of this repository include [Han Hu](https://github.com/ancientmooner), [Jiayuan Gu](https://github.com/Jiayuan-Gu), [Zheng Zhang](https://github.com/stupidZZ) and [Dazhi Cheng](https://github.com/chengdazhi).
+The major contributors of this repository include [Han Hu](https://github.com/ancientmooner), [Jiayuan Gu](https://github.com/Jiayuan-Gu), [Zheng Zhang](https://github.com/stupidZZ) , [Dazhi Cheng](https://github.com/chengdazhi), [Jifeng Dai](https://github.com/daijifeng001) and [Yichen Wei](https://github.com/YichenWei).
 
 
 ## Introduction
@@ -18,7 +18,7 @@ This is an official implementation for [Relation Networks for Object Detection](
 
 ## License
 
-© Microsoft, 2018. Licensed under an MIT license.
+© Microsoft, 2017. Licensed under an MIT license.
 
 ## Citing Relation Networks
 
@@ -125,7 +125,7 @@ cd RelationNetworks
 
 We provide trained relation network models, covering all settings in the above Main Results table.
 
-1. To try out our pre-trained deformable models, please download manually from [OneDrive](https://1drv.ms/u/s!Am-5JzdW2XHzhqMSjehIcCgAhvEAHw) or [BaiduYun](https://pan.baidu.com/s/1dFlPFED), and put it under folder `output/`.
+1. To try out our pre-trained relation network models, please download manually from [OneDrive](https://1drv.ms/u/s!Am-5JzdW2XHzhqpD-UHVYNbj25lU0w), and put it under folder `output/`. 
 
 	Make sure it looks like this:
 	```
@@ -138,6 +138,18 @@ We provide trained relation network models, covering all settings in the above M
 	./output/rcnn/coco/resnet_v1_101_coco_trainvalminus_rcnn_fpn_8epoch/train2014_valminusminival2014/rcnn_fpn_coco-0008.params
 	./output/rcnn/coco/resnet_v1_101_coco_trainvalminus_rcnn_fpn_relation_learn_nms_8epoch/train2014_valminusminival2014/rcnn_fpn_coco-0008.params
 	```
+	
+	
+   For FPN models, additional proposal files are needed. Please download manually from [OneDrive](https://1drv.ms/u/s!Am-5JzdW2XHzhqpEnDg8s4FH33zh8g), and put them under folder 'proposal/'.
+   
+   Make sure it looks like this:
+   ```
+   ./proposal/resnet_v1_101_fpn/rpn_data/COCO_train2014_rpn.pkl
+   ./proposal/resnet_v1_101_fpn/rpn_data/COCO_valminusminival2014_rpn.pkl
+   ./proposal/resnet_v1_101_fpn/rpn_data/COCO_minival2014_rpn.pkl
+   ./proposal/resnet_v1_101_fpn/rpn_data/COCO_test-dev2015_rpn.pkl
+   ```
+   
 2. To run the Faster RCNN with Relation Module and Learn NMS model, run
 	```
 	python experiments/relation_rcnn/rcnn_test.py --cfg experiments/relation_rcnn/cfgs/resnet_v1_101_coco_trainvalminus_rcnn_end2end_relation_learn_nms_8epoch.yaml --ignore_cache
